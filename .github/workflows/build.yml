@@ -1,0 +1,49 @@
+name: Build PS Vita M3U8 Player
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify assets
+        run: |
+          echo "=== Verifica asset LiveArea ==="
+          ls -lh sce_sys/icon0.png
+          ls -lh sce_sys/livearea/contents/bg.png
+          ls -lh sce_sys/livearea/contents/startup.png
+          ls -lh sce_sys/livearea/contents/template.xml
+          file sce_sys/icon0.png
+          file sce_sys/livearea/contents/bg.png
+          file sce_sys/livearea/contents/startup.png
+
+      - name: Build with VitaSDK
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src" \
+            -w /src \
+            vitasdk/vitasdk:latest \
+            bash -c "
+              set -e
+              mkdir -p build
+              cd build
+              cmake .. -DCMAKE_TOOLCHAIN_FILE=\$VITASDK/share/vita.toolchain.cmake
+              make -j\$(nproc)
+              ls -lh m3u8player.vpk
+              echo 'Build completato con successo'
+            "
+
+      - name: Upload VPK
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3u8player-vpk
+          path: build/m3u8player.vpk
+          if-no-files-found: error
