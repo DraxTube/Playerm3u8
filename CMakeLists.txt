@@ -12,7 +12,7 @@ project(m3u8player C)
 include("${VITASDK}/share/vita.cmake" REQUIRED)
 
 set(VITA_APP_NAME "M3U8 Player")
-set(VITA_TITLEID  "M3U8PL001")
+set(VITA_TITLEID  "M3U8PL002")
 set(VITA_VERSION  "01.00")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -O2")
@@ -48,12 +48,8 @@ target_link_libraries(${PROJECT_NAME}
 
 vita_create_self(${PROJECT_NAME}.self ${PROJECT_NAME} UNSAFE)
 
+# Nessun asset LiveArea — VPK minimo per testare l'installazione
 vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
   VERSION ${VITA_VERSION}
   NAME    ${VITA_APP_NAME}
-  FILE ${CMAKE_SOURCE_DIR}/sce_sys/icon0.png                      sce_sys/icon0.png
-  FILE ${CMAKE_SOURCE_DIR}/sce_sys/pic0.png                       sce_sys/pic0.png
-  FILE ${CMAKE_SOURCE_DIR}/sce_sys/livearea/contents/bg0.png      sce_sys/livearea/contents/bg0.png
-  FILE ${CMAKE_SOURCE_DIR}/sce_sys/livearea/contents/startup.png  sce_sys/livearea/contents/startup.png
-  FILE ${CMAKE_SOURCE_DIR}/sce_sys/livearea/contents/template.xml sce_sys/livearea/contents/template.xml
 )
