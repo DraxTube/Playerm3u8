@@ -14,16 +14,59 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Optimize PNG assets (richiesto dalla PS Vita)
+      - name: Install tools
         run: |
-          sudo apt-get install -y pngquant
-          # La Vita richiede PNG 8-bit indexed ottimizzati con pngquant
-          pngquant --force --quality=80-100 --output sce_sys/icon0.png                      sce_sys/icon0.png
-          pngquant --force --quality=80-100 --output sce_sys/pic0.png                       sce_sys/pic0.png
-          pngquant --force --quality=80-100 --output sce_sys/livearea/contents/bg0.png      sce_sys/livearea/contents/bg0.png
-          pngquant --force --quality=80-100 --output sce_sys/livearea/contents/startup.png  sce_sys/livearea/contents/startup.png
-          echo "=== Asset pronti ==="
-          file sce_sys/icon0.png sce_sys/pic0.png sce_sys/livearea/contents/bg0.png sce_sys/livearea/contents/startup.png
+          sudo apt-get update -qq
+          sudo apt-get install -y pngquant python3-pip
+          pip3 install Pillow --break-system-packages
+
+      - name: Prepare LiveArea assets (resize + pngquant)
+        run: |
+          mkdir -p sce_sys/livearea/contents
+
+          python3 - <<'EOF'
+          from PIL import Image
+
+          # (source, dest, size)
+          tasks = [
+              ("assets_src/icon0_orig.jpg",   "sce_sys/icon0.png",                           (128, 128)),
+              ("assets_src/startup_orig.jpg",  "sce_sys/pic0.png",                            (222, 125)),
+              ("assets_src/bg_orig.jpg",       "sce_sys/livearea/contents/bg0.png",           (840, 500)),
+              ("assets_src/startup_orig.jpg",  "sce_sys/livearea/contents/startup.png",       (280, 158)),
+          ]
+          for src, dst, size in tasks:
+              img = Image.open(src).convert("RGB")
+              img = img.resize(size, Image.LANCZOS)
+              # Salva come PNG grezzo a 24-bit; pngquant lo converte dopo
+              img.save(dst, "PNG")
+              print(f"  resized {src} -> {dst} {size}")
+          EOF
+
+          # pngquant è l'unico tool accettato dalla PS Vita per i PNG
+          # icon0 e startup: 24-bit va bene, bg0 deve essere 8-bit
+          pngquant --force --quality=85-100 --output sce_sys/icon0.png                     sce_sys/icon0.png
+          pngquant --force --quality=85-100 --output sce_sys/pic0.png                      sce_sys/pic0.png
+          pngquant --force --quality=85-100 --output sce_sys/livearea/contents/bg0.png     sce_sys/livearea/contents/bg0.png
+          pngquant --force --quality=85-100 --output sce_sys/livearea/contents/startup.png sce_sys/livearea/contents/startup.png
+
+          echo "=== Verifica asset ==="
+          file sce_sys/icon0.png sce_sys/pic0.png \
+               sce_sys/livearea/contents/bg0.png \
+               sce_sys/livearea/contents/startup.png
+
+      - name: Write template.xml
+        run: |
+          cat > sce_sys/livearea/contents/template.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <livearea style="a1" format-ver="01.00" content-rev="1">
+            <livearea-background>
+              <image>bg0.png</image>
+            </livearea-background>
+            <gate>
+              <startup-image>startup.png</startup-image>
+            </gate>
+          </livearea>
+          EOF
 
       - name: Build with VitaSDK
         run: |
